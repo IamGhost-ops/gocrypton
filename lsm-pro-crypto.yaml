@@ -1,0 +1,57 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: crypto-lsm-monitoring
+  annotations:
+    description: "Monitoring kryptografii za pomoca hakow LSM w Tetragon v1.7.0 (Kernel 7.0)
+spec:
+    podSelector:
+      matchLabels:
+        app: 
+  lsmHooks:
+    - hook: "security_key_alloc"
+      args: 
+        - index: 0
+          type: "key"
+      selectors:
+        - matchActions:
+            - action: Post
+
+    - hook: "security_key_permission"
+      args:
+        - index: 0
+          type: "key_ref"
+        - index: 1
+          type: "cred"
+        - index: 2
+          type: "uint32"
+      selectors:
+        - matchActions:
+            - action: Post
+
+    - hook: "security_inode_permission"
+      args:
+        - index: 0 
+          type: "inode"
+        - index: 1
+          type: "int"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "Prefix"
+              values:
+                - "dev/urandom"
+                - "dev/random"
+                - "dev/crypto"
+          matchActions:
+            - action: Post
+
+    - hook: "security_kernel_read_file"
+      args:
+        - index: 0
+          type: "file"
+        - index: 1
+          type: "int"
+      selectors:
+        - matchActions:
+            - action: Post
