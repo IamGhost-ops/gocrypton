@@ -19,7 +19,7 @@ type AuditLogBlock struct {
         TetragonData string `json:"tetragon_data"`
         PrevHash     string `json:"prev_hash"`
         CurrentHash  string `json:"current_hash"`
-        PQCSignature string `json:"pqc_signature"`
+        Ed25519Sig   string `json:"ed25519_signature_hex"`
 
 }
 
@@ -32,18 +32,18 @@ func calculateSHA256(data string) string {
 }
 
 func main() {
-        fmt.Println("[PQC-SIGNER] Inicjalizacja Post-Quantum Log Signer dla Tetragon v1.7.0...")
+        fmt.Println("[Ed25519-Signer] Initializing Ed25519 log signer for Tetragon v1.7.0...")
 
         pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
         if err != nil {
-                log.Fatalf("Blad generowania kluczy post-kwantowych: %v", err)
+                log.Fatalf("Failed to generated Ed25519 keys: %v", err)
         }
-        fmt.Println("[PQC-SIGNER] Wygenerowane pare kluczy ML-DSA-65 (Odporne na komputery kwantowe).")
+        fmt.Println("[Ed25519] Generated Ed25519 key pair.")
 
         genesisHash := calculateSHA256("GENESIS_BOOT_STATE")
 
         rawTetragonEvent := `{"process":{"binary":"/bin/cat","pid":4120,"fd_install":3},"action":"SIGKILL","lsm_hook":"bprm_check_security","message":"Unauthorized private key access attempt"}`
-        fmt.Printf("\n[PQC_SIGNER] Wykryto krytyczne zdarzenie LSM:\n%s\n", rawTetragonEvent)
+        fmt.Printf("\n[SHA-256] Wykryto krytyczne zdarzenie LSM:\n%s\n", rawTetragonEvent)
 
         signatureBytes := ed25519.Sign(privKey, []byte(rawTetragonEvent))
         pqcSignatureHex := hex.EncodeToString(signatureBytes)
@@ -57,29 +57,29 @@ func main() {
                 Timestamp:    time.Now().Format(time.RFC3339),
                 TetragonData: rawTetragonEvent,
                 PrevHash:     genesisHash,
-                PQCSignature: pqcSignatureHex,
+                Ed25519Sig:   ed25519Signature,
                 CurrentHash:  currentHash,
 }
 
-        fmt.Println("[PQC-SIGNER] Log pomyslnie przetworzony i wpiety do struktury Append-Only Ledger.")
+        fmt.Println("[Ed25519] Log successfully processed and signed by Ed25519 signer.")
 
-        fmt.Println("\n[AUDYTOR] Uruchamianie weryfikacji integralnosci logow systemowych...")
+        fmt.Println("\n[AUDITOR] Lauching system log integrity verification...")
 
-        decodeSig, err := hex.DecodeString(newBlock.PQCSignature)
+        decodeSig, err := hex.DecodeString(newBlock.Ed25519Sig)
         if err != nil {
-                log.Fatalf("Blad dekodowania podpisu: %v", err)
+                log.Fatalf("Signature hex decode error: %v", err)
 }
 
         isSignatureValid := ed25519.Verify(pubKey, []byte(newBlock.TetragonData), decodeSig)
 
-        recalculatedData := fmt.Sprintf("%d%s%s%s", newBlock.Index, newBlock.TetragonData, newBlock.PrevHash, newBlock.PQCSignature)
+        recalculatedData := fmt.Sprintf("%d%s%s%s", newBlock.Index, newBlock.TetragonData, newBlock.PrevHash, newBlock.Ed25519Sig)
         recalculatedHash := calculateSHA256(recalculatedData)
         isChainValid := recalculatedHash == newBlock.CurrentHash
 
         if isSignatureValid && isChainValid {
-                fmt.Println("[SUKCES] Log jest w 100% autentyczny! Podpis post-kwantowy PQC poprawny, integralnosc lancucha zachowana. Brak sladow manipulacji.")
+                fmt.Println("[SUCCESS] Log is 100% authentic! Ed 25519 signature is valid, chain integrity preserved. No signs of tampering.")
         } else {
-                fmt.Println("[ALARM] Wykryto manipulacje w logach audytowych!Integralnosc kryptograficzna zostala naruszona.")
+                fmt.Println("[ALARM] Tampering detected in audit logs! Cryptographic integrity has been compromised.")
         }
 
 
